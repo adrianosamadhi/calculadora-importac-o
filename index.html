@@ -165,11 +165,16 @@
           return (
             <div className={`min-h-screen ${theme.bg} ${theme.text} font-sans p-4 md:p-8 transition-colors duration-300`}>
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center mb-10 relative">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-                            Calculadora <span className={theme.highlight}>Importação & Precificação</span>
-                        </h1>
-                        <p className="text-slate-500 font-medium">Desenvolvido por Adriano Santos</p>
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                        {/* SEU LOGO AQUI */}
+                        <img src="logo.png" alt="Logo" className="h-20 w-auto object-contain rounded-lg" />
+                        
+                        <div className="text-center md:text-left">
+                            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
+                                Calculadora <span className={theme.highlight}>Importação & Precificação</span>
+                            </h1>
+                            <p className="text-slate-500 font-medium">Desenvolvido por Adriano Santos</p>
+                        </div>
                     </div>
                     <button onClick={() => setIsDarkMode(!isDarkMode)} className={`mt-4 md:mt-0 p-3 rounded-full border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-yellow-400' : 'bg-white border-slate-200 text-slate-600'} shadow-lg transition-all hover:scale-110`}>
                         {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
@@ -236,7 +241,7 @@
                                 <p className="text-3xl font-black text-amber-400">{fmtBRL(custoTotalImportacaoBRL)}</p>
                             </div>
                         </div>
-                        <div className="mt-8 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6 text-center">
+                        <div className="mt-8 rounded-2xl border border-slate-700/50 bg-slate-950 p-6 text-center">
                             <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Custo Unitário Final</p>
                             <p className="text-4xl font-black text-white">{fmtBRL(custoUnitarioFinalBRL)}</p>
                         </div>
