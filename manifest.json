@@ -1,0 +1,17 @@
+{
+  "short_name": "CalcImport",
+  "name": "Calculadora Importação & Precificação",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2344/2344132.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#020617",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#fbbf24"
+}

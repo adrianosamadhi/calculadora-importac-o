@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Importação & Precificação - Adriano Santos</title>
+    <meta name="theme-color" content="#020617">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { Calculator, Package, TrendingUp, AlertTriangle, ExternalLink, Percent, Info, Plane, Truck, Sun, Moon, CheckCircle2, ShoppingBag } from 'https://esm.sh/lucide-react@0.292.0';
+
+        const mlRates = {
+          "Até 0,3 kg": [5.65, 6.35, 7.75, 12.35, 13.35, 15.45, 16.45, 20.95],
+          "De 0,3 a 0,5 kg": [5.95, 6.75, 7.95, 13.25, 15.45, 17.65, 18.85, 23.55],
+          "De 0,5 a 1 kg": [6.05, 6.75, 7.95, 14.15, 19.85, 18.45, 19.85, 22.65],
+          "De 1 a 1,5 kg": [6.15, 6.85, 8.15, 14.45, 18.45, 19.45, 21.15, 24.65],
+          "De 1,5 a 2 kg": [6.35, 6.75, 8.15, 15.75, 19.33, 21.05, 22.65, 25.55],
+          "De 2 a 3 kg": [6.35, 7.95, 9.95, 14.85, 21.05, 22.65, 25.65, 26.25],
+          "De 3 a 4 kg": [6.35, 8.15, 9.95, 15.85, 28.65, 27.75, 27.75, 33.55],
+          "De 4 a 5 kg": [6.95, 8.25, 10.15, 25.55, 28.65, 28.65, 30.75, 40.05],
+          "De 5 a 7 kg": [6.65, 8.95, 10.33, 27.65, 31.45, 33.65, 37.65, 43.25],
+          "De 6 a 7 kg": [6.75, 9.35, 11.35, 31.55, 38.65, 36.05, 32.65, 50.65],
+          "De 7 a 8 kg": [6.75, 9.25, 11.33, 28.95, 54.35, 55.05, 42.65, 54.35]
+        };
+        const mlPriceTiers = [18.99, 38.99, 78.99, 98.99, 119.99, 149.99, 199.99, Infinity];
+        const parseNum = (val) => Number(String(val).replace(',', '.')) || 0;
+
+        function App() {
+          const [isDarkMode, setIsDarkMode] = useState(true);
+          const [dolarStatus, setDolarStatus] = useState('buscando');
+          const [inputs, setInputs] = useState({
+            cotacaoDolar: '5.14',
+            nomeProduto: 'PRODUTO',
+            custoUnitario: '0.10',
+            quantidade: '1000',
+            freteInternacional: '50.00',
+            seguroInternacional: '0.00',
+            impostoImportacao: '60',
+            icms: '17',
+            taxaCourier: '18.80'
+          });
+          const [platform, setPlatform] = useState('ML');
+          const [precificacao, setPrecificacao] = useState({
+            custoProduto: '0,00', 
+            impostoVenda: '0',
+            lucroDesejado: '20',
+            taxaMkt: '14',
+            embalagem: '0,50',
+            peso: 'De 1 a 1,5 kg'
+          });
+
+          useEffect(() => {
+            const fetchDolar = async () => {
+              try {
+                const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+                const data = await res.json();
+                if (data?.USDBRL?.bid) {
+                  setInputs(prev => ({ ...prev, cotacaoDolar: parseFloat(data.USDBRL.bid).toFixed(2) }));
+                  setDolarStatus('auto');
+                } else { setDolarStatus('manual'); }
+              } catch (e) { setDolarStatus('manual'); }
+            };
+            fetchDolar();
+          }, []);
+
+          const q = parseNum(inputs.quantidade);
+          const cUnit = parseNum(inputs.custoUnitario);
+          const fInt = parseNum(inputs.freteInternacional);
+          const sInt = parseNum(inputs.seguroInternacional);
+          const dolar = parseNum(inputs.cotacaoDolar);
+          const impImp = parseNum(inputs.impostoImportacao);
+          const vIcms = parseNum(inputs.icms);
+          const tCourier = parseNum(inputs.taxaCourier);
+          const valorTotalProdutosUSD = cUnit * q;
+          const valorTotalProdutosBRL = valorTotalProdutosUSD * dolar;
+          const valorFreteSeguroUSD = fInt + sInt;
+          const valorFreteSeguroBRL = valorFreteSeguroUSD * dolar;
+          const valorAduaneiroUSD = valorTotalProdutosUSD + valorFreteSeguroUSD;
+          const valorAduaneiroBRL = valorAduaneiroUSD * dolar;
+          const impostoImportBRL = (valorAduaneiroUSD * (impImp / 100)) * dolar;
+          const taxaCourierBRL = tCourier * dolar;
+          const aliquotaICMS = vIcms / 100;
+          const baseICMS = (valorAduaneiroBRL + impostoImportBRL + taxaCourierBRL) / (1 - aliquotaICMS);
+          const icmsBRL = (aliquotaICMS > 0 && aliquotaICMS < 1) ? baseICMS * aliquotaICMS : 0;
+          const totalImpostosBRL = impostoImportBRL + icmsBRL;
+          const custoTotalImportacaoBRL = valorAduaneiroBRL + impostoImportBRL + icmsBRL + taxaCourierBRL;
+          const custoUnitarioFinalBRL = q > 0 ? custoTotalImportacaoBRL / q : 0;
+
+          useEffect(() => {
+            if (custoUnitarioFinalBRL > 0) {
+              setPrecificacao(prev => ({ ...prev, custoProduto: custoUnitarioFinalBRL.toFixed(2).replace('.', ',') }));
+            }
+          }, [custoUnitarioFinalBRL]);
+
+          const handleImportChange = (e) => {
+            const { name, value } = e.target;
+            setInputs(prev => ({ ...prev, [name]: value }));
+          };
+
+          const handlePrecoChange = (e) => {
+            const { name, value } = e.target;
+            setPrecificacao(prev => ({ ...prev, [name]: value }));
+          };
+
+          const calcularVenda = () => {
+            const cFinal = parseNum(precificacao.custoProduto);
+            const emb = parseNum(precificacao.embalagem);
+            const impVenda = parseNum(precificacao.impostoVenda) / 100;
+            const lucro = parseNum(precificacao.lucroDesejado) / 100;
+            const taxaML = parseNum(precificacao.taxaMkt) / 100;
+
+            for (let p = cFinal + emb; p <= 50000; p += 0.05) {
+              let f = 0;
+              let com = platform === 'ML' ? taxaML : 0.20;
+              if (platform === 'SHOPEE') {
+                 if (p <= 79.99) { f = 4; com = 0.20; }
+                 else { f = 20; com = 0.14; }
+              } else {
+                const idx = mlPriceTiers.findIndex(t => p <= t);
+                const pos = idx === -1 ? 7 : idx;
+                if (p < 79) { f = 6.00; } 
+                else { f = mlRates[precificacao.peso] ? mlRates[precificacao.peso][pos] : 0; }
+              }
+              const liq = p - (cFinal + emb + f + (p * com) + (p * impVenda));
+              if (p > 0 && (liq / p) >= lucro) {
+                return { preco: p, lucroLiq: liq, frete: f };
+              }
+            }
+            return { preco: 0, lucroLiq: 0, frete: 0 };
+          };
+
+          const resVenda = calcularVenda();
+          const qtdParaLucro = q > 0 ? q : 1; 
+          const lucroTotal = resVenda.lucroLiq * qtdParaLucro;
+          const cFinalEditado = parseNum(precificacao.custoProduto);
+          const roi = cFinalEditado > 0 ? (resVenda.lucroLiq / cFinalEditado) * 100 : 0;
+          const fmtBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          const fmtUSD = (v) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+          const theme = {
+            bg: isDarkMode ? 'bg-[#020617]' : 'bg-slate-50',
+            text: isDarkMode ? 'text-slate-100' : 'text-slate-900',
+            card: isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200',
+            highlight: 'text-amber-400'
+          };
+
+          return (
+            <div className={`min-h-screen ${theme.bg} ${theme.text} font-sans p-4 md:p-8 transition-colors duration-300`}>
+                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center mb-10 relative">
+                    <div className="text-center md:text-left">
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
+                            Calculadora <span className={theme.highlight}>Importação & Precificação</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium">Desenvolvido por Adriano Santos</p>
+                    </div>
+                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`mt-4 md:mt-0 p-3 rounded-full border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-yellow-400' : 'bg-white border-slate-200 text-slate-600'} shadow-lg transition-all hover:scale-110`}>
+                        {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+                    </button>
+                </div>
+
+                <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    {/* COL 1: IMPORTAÇÃO */}
+                    <div className="space-y-6">
+                        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
+                            <div className="absolute left-0 top-0 h-full w-1.5 bg-amber-500"></div>
+                            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-amber-500 mb-2">
+                                <AlertTriangle size={18} /> Atenção: Anuências
+                            </h3>
+                            <p className="text-xs text-slate-400 mb-4 leading-relaxed">Antes de importar, verifique se o NCM exige Licença de Importação (Anvisa, Inmetro, etc).</p>
+                            <a href="https://www4.receita.fazenda.gov.br/simulador/" target="_blank" className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-xs font-bold uppercase tracking-wide transition-all hover:bg-slate-800 ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-300 bg-white text-slate-700'}`}>
+                                Consultar NCM Oficial <ExternalLink size={14} />
+                            </a>
+                        </div>
+                        <div className={`rounded-3xl border p-6 shadow-2xl ${theme.card}`}>
+                            <h2 className="flex items-center gap-2 text-lg font-bold mb-6"><Package className="text-amber-500" /> Dados Básicos (Compra)</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputGroup label="Dólar Hoje" value={inputs.cotacaoDolar} onChange={handleImportChange} name="cotacaoDolar" isYellow isDark={isDarkMode} hint={dolarStatus} />
+                                <div className="col-span-1">
+                                    <label className="mb-1.5 block text-xs font-bold uppercase text-slate-500">Produto</label>
+                                    <input type="text" name="nomeProduto" value={inputs.nomeProduto} onChange={handleImportChange} className={`w-full rounded-xl border px-4 py-3 font-bold outline-none transition-all focus:ring-2 focus:ring-amber-500 ${isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'}`} />
+                                </div>
+                                <InputGroup label="Custo Unit (USD)" value={inputs.custoUnitario} onChange={handleImportChange} name="custoUnitario" isYellow isDark={isDarkMode} />
+                                <InputGroup label="Quantidade" value={inputs.quantidade} onChange={handleImportChange} name="quantidade" isYellow isDark={isDarkMode} />
+                                <InputGroup label="Frete Int. (USD)" value={inputs.freteInternacional} onChange={handleImportChange} name="freteInternacional" isYellow isDark={isDarkMode} />
+                                <InputGroup label="Seguro (USD)" value={inputs.seguroInternacional} onChange={handleImportChange} name="seguroInternacional" isYellow isDark={isDarkMode} />
+                            </div>
+                        </div>
+                         <div className={`rounded-3xl border p-6 shadow-2xl ${theme.card}`}>
+                            <h2 className="flex items-center gap-2 text-lg font-bold mb-6"><Percent className="text-amber-500" /> Impostos</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputGroup label="Imp. Importação %" value={inputs.impostoImportacao} onChange={handleImportChange} name="impostoImportacao" isDark={isDarkMode} />
+                                <InputGroup label="ICMS Estado %" value={inputs.icms} onChange={handleImportChange} name="icms" isDark={isDarkMode} />
+                                <div className="col-span-2">
+                                    <InputGroup label="Taxa Courier (USD)" value={inputs.taxaCourier} onChange={handleImportChange} name="taxaCourier" isDark={isDarkMode} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* COL 2: RESULTADOS */}
+                    <div className={`flex h-full flex-col rounded-3xl border p-8 shadow-2xl ${theme.card}`}>
+                        <div className="mb-6 border-b border-slate-700/50 pb-6">
+                            <h2 className="flex items-center gap-2 text-xl font-bold"><Calculator className="text-emerald-500" /> Custo da Importação</h2>
+                        </div>
+                        <div className="space-y-6 mb-8">
+                            <ResultRow label="Valor Aduaneiro" valUSD={fmtUSD(valorAduaneiroUSD)} valBRL={fmtBRL(valorAduaneiroBRL)} isDark={isDarkMode} />
+                            <ResultRow label="Imp. Importação" valUSD="" valBRL={fmtBRL(impostoImportBRL)} highlight isDark={isDarkMode} />
+                            <ResultRow label="ICMS Total" valUSD="" valBRL={fmtBRL(icmsBRL)} highlight isDark={isDarkMode} />
+                        </div>
+                        <div className="flex-1 space-y-4 pt-4 border-t border-slate-700/50">
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Resumo da Operação</p>
+                            <SummaryRow label="Total Produtos" value={fmtBRL(valorTotalProdutosBRL)} isDark={isDarkMode} />
+                            <SummaryRow label="Frete + Seguro" value={fmtBRL(valorFreteSeguroBRL)} isDark={isDarkMode} />
+                            <SummaryRow label="Impostos (II + ICMS)" value={fmtBRL(totalImpostosBRL)} isDark={isDarkMode} />
+                            <SummaryRow label="Taxa Courier" value={fmtBRL(taxaCourierBRL)} isDark={isDarkMode} />
+                            <div className="mt-6 pt-4 border-t border-slate-700/50 text-center">
+                                <p className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-1">Total da Importação</p>
+                                <p className="text-3xl font-black text-amber-400">{fmtBRL(custoTotalImportacaoBRL)}</p>
+                            </div>
+                        </div>
+                        <div className="mt-8 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6 text-center">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Custo Unitário Final</p>
+                            <p className="text-4xl font-black text-white">{fmtBRL(custoUnitarioFinalBRL)}</p>
+                        </div>
+                    </div>
+
+                    {/* COL 3: PRECIFICAÇÃO */}
+                    <div className={`flex h-full flex-col rounded-3xl border shadow-2xl overflow-hidden ${theme.card}`}>
+                        <div className="flex border-b border-slate-700/50">
+                            <button onClick={() => setPlatform('ML')} className={`flex-1 py-4 text-sm font-black uppercase tracking-wide transition-colors ${platform === 'ML' ? 'bg-yellow-500 text-black' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Mercado Livre</button>
+                            <button onClick={() => setPlatform('SHOPEE')} className={`flex-1 py-4 text-sm font-black uppercase tracking-wide transition-colors ${platform === 'SHOPEE' ? 'bg-orange-600 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Shopee</button>
+                        </div>
+                        <div className="p-8 flex-1 flex flex-col">
+                            <h2 className="flex items-center gap-2 text-xl font-bold mb-6">
+                                <TrendingUp className={platform === 'ML' ? 'text-yellow-500' : 'text-orange-500'} /> Precificação Inteligente
+                            </h2>
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                <div className="col-span-2">
+                                    <InputGroup label="Custo do Produto (R$)" value={precificacao.custoProduto} onChange={handlePrecoChange} name="custoProduto" hint="Nacional/Importado" isDark={isDarkMode} />
+                                </div>
+                                <InputGroup label="Imposto Venda %" value={precificacao.impostoVenda} onChange={handlePrecoChange} name="impostoVenda" isDark={isDarkMode} />
+                                <InputGroup label="Embalagem R$" value={precificacao.embalagem} onChange={handlePrecoChange} name="embalagem" isDark={isDarkMode} />
+                                {platform === 'ML' && (
+                                    <>
+                                        <InputGroup label="Taxa Categoria %" value={precificacao.taxaMkt} onChange={handlePrecoChange} name="taxaMkt" isDark={isDarkMode} />
+                                        <div className="col-span-1">
+                                            <label className={`mb-1.5 block text-xs font-bold uppercase ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>Peso (Frete)</label>
+                                            <select name="peso" value={precificacao.peso} onChange={handlePrecoChange} className={`w-full rounded-xl border px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500 ${isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'}`}>
+                                                {Object.keys(mlRates).map(p => <option key={p} value={p}>{p}</option>)}
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+                                <div className="col-span-2 mt-2">
+                                    <InputGroup label="Lucro Líquido Desejado %" value={precificacao.lucroDesejado} onChange={handlePrecoChange} name="lucroDesejado" isYellow isDark={isDarkMode} />
+                                </div>
+                            </div>
+                            <div className="mt-auto bg-slate-950 rounded-2xl p-6 border border-slate-800 text-center relative overflow-hidden group">
+                                <div className={`absolute top-0 left-0 w-full h-1 ${platform === 'ML' ? 'bg-yellow-500' : 'bg-orange-500'}`}></div>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Preço de Venda Sugerido</p>
+                                <p className={`text-5xl font-black mb-4 ${platform === 'ML' ? 'text-yellow-400' : 'text-orange-500'}`}>
+                                    {fmtBRL(resVenda.preco)}
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 text-left pt-4 border-t border-slate-800">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Lucro Unitário</p>
+                                        <p className="text-emerald-400 font-bold text-lg">{fmtBRL(resVenda.lucroLiq)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">ROI</p>
+                                        <p className="text-emerald-400 font-bold text-lg">{roi.toFixed(1)}%</p>
+                                    </div>
+                                     <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Frete Desc.</p>
+                                        <p className="text-red-400 font-bold text-sm">-{fmtBRL(resVenda.frete)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Lucro Estoque</p>
+                                        <p className="text-amber-400 font-bold text-sm">{fmtBRL(lucroTotal)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          );
+        }
+
+        function InputGroup({ label, value, onChange, name, isYellow, hint, isDark }) {
+            const darkClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 placeholder-slate-700' : 'bg-[#1e293b] border-slate-700 text-slate-200 focus:bg-slate-800';
+            const lightClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 placeholder-slate-700' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white';
+            return (
+                <div className="col-span-1">
+                    <label className={`mb-1.5 flex justify-between text-xs font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {label} {hint && <span className="text-emerald-500 font-normal normal-case">({hint})</span>}
+                    </label>
+                    <input type="text" name={name} value={value} onChange={onChange} className={`w-full rounded-xl border px-4 py-3 font-bold outline-none transition-all focus:ring-2 focus:ring-amber-500 ${isDark ? darkClass : lightClass}`} />
+                </div>
+            );
+        }
+
+        function ResultRow({ label, valUSD, valBRL, highlight, isDark }) {
+            const lblColor = isDark ? (highlight ? 'text-slate-300' : 'text-slate-500') : (highlight ? 'text-slate-700' : 'text-slate-600');
+            const brlColor = highlight ? 'text-red-500' : (isDark ? 'text-slate-200' : 'text-slate-900');
+            return (
+                <div className={`flex justify-between items-end border-b pb-2 last:border-0 ${isDark ? 'border-slate-800' : 'border-slate-300'}`}>
+                    <span className={`text-sm font-medium ${lblColor}`}>{label}</span>
+                    <div className="text-right">
+                        {valUSD && <span className="block text-xs font-bold text-slate-500">{valUSD}</span>}
+                        <span className={`block font-bold ${brlColor}`}>{valBRL}</span>
+                    </div>
+                </div>
+            );
+        }
+        
+        function SummaryRow({ label, value, isDark }) {
+            return (
+                <div className="flex justify-between items-center text-sm mb-2">
+                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{label}</span>
+                    <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{value}</span>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('App pronto para uso offline!'))
+                    .catch(err => console.log('Erro PWA:', err));
+            });
+        }
+    </script>
+</body>
+</html>
