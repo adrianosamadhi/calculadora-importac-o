@@ -2,362 +2,623 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Calculadora Importação & Precificação - Adriano Santos</title>
-    <meta name="theme-color" content="#020617">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
     
+    <meta name="theme-color" content="#020617">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s; background-color: #020617; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { Calculator, Package, TrendingUp, AlertTriangle, ExternalLink, Percent, Info, Plane, Truck, Sun, Moon, CheckCircle2, ShoppingBag } from 'https://esm.sh/lucide-react@0.292.0';
-
-        const mlRates = {
-          "Até 0,3 kg": [5.65, 6.35, 7.75, 12.35, 13.35, 15.45, 16.45, 20.95],
-          "De 0,3 a 0,5 kg": [5.95, 6.75, 7.95, 13.25, 15.45, 17.65, 18.85, 23.55],
-          "De 0,5 a 1 kg": [6.05, 6.75, 7.95, 14.15, 19.85, 18.45, 19.85, 22.65],
-          "De 1 a 1,5 kg": [6.15, 6.85, 8.15, 14.45, 18.45, 19.45, 21.15, 24.65],
-          "De 1,5 a 2 kg": [6.35, 6.75, 8.15, 15.75, 19.33, 21.05, 22.65, 25.55],
-          "De 2 a 3 kg": [6.35, 7.95, 9.95, 14.85, 21.05, 22.65, 25.65, 26.25],
-          "De 3 a 4 kg": [6.35, 8.15, 9.95, 15.85, 28.65, 27.75, 27.75, 33.55],
-          "De 4 a 5 kg": [6.95, 8.25, 10.15, 25.55, 28.65, 28.65, 30.75, 40.05],
-          "De 5 a 7 kg": [6.65, 8.95, 10.33, 27.65, 31.45, 33.65, 37.65, 43.25],
-          "De 6 a 7 kg": [6.75, 9.35, 11.35, 31.55, 38.65, 36.05, 32.65, 50.65],
-          "De 7 a 8 kg": [6.75, 9.25, 11.33, 28.95, 54.35, 55.05, 42.65, 54.35]
-        };
-        const mlPriceTiers = [18.99, 38.99, 78.99, 98.99, 119.99, 149.99, 199.99, Infinity];
-        const parseNum = (val) => Number(String(val).replace(',', '.')) || 0;
-
-        function App() {
-          const [isDarkMode, setIsDarkMode] = useState(true);
-          const [dolarStatus, setDolarStatus] = useState('buscando');
-          const [inputs, setInputs] = useState({
-            cotacaoDolar: '5.14',
-            nomeProduto: 'PRODUTO',
-            custoUnitario: '0.10',
-            quantidade: '1000',
-            freteInternacional: '50.00',
-            seguroInternacional: '0.00',
-            impostoImportacao: '60',
-            icms: '17',
-            taxaCourier: '18.80'
-          });
-          const [platform, setPlatform] = useState('ML');
-          const [precificacao, setPrecificacao] = useState({
-            custoProduto: '0,00', 
-            impostoVenda: '0',
-            lucroDesejado: '20',
-            taxaMkt: '14',
-            embalagem: '0,50',
-            peso: 'De 1 a 1,5 kg'
-          });
-
-          useEffect(() => {
-            const fetchDolar = async () => {
-              try {
-                const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-                const data = await res.json();
-                if (data?.USDBRL?.bid) {
-                  setInputs(prev => ({ ...prev, cotacaoDolar: parseFloat(data.USDBRL.bid).toFixed(2) }));
-                  setDolarStatus('auto');
-                } else { setDolarStatus('manual'); }
-              } catch (e) { setDolarStatus('manual'); }
-            };
-            fetchDolar();
-          }, []);
-
-          const q = parseNum(inputs.quantidade);
-          const cUnit = parseNum(inputs.custoUnitario);
-          const fInt = parseNum(inputs.freteInternacional);
-          const sInt = parseNum(inputs.seguroInternacional);
-          const dolar = parseNum(inputs.cotacaoDolar);
-          const impImp = parseNum(inputs.impostoImportacao);
-          const vIcms = parseNum(inputs.icms);
-          const tCourier = parseNum(inputs.taxaCourier);
-          const valorTotalProdutosUSD = cUnit * q;
-          const valorTotalProdutosBRL = valorTotalProdutosUSD * dolar;
-          const valorFreteSeguroUSD = fInt + sInt;
-          const valorFreteSeguroBRL = valorFreteSeguroUSD * dolar;
-          const valorAduaneiroUSD = valorTotalProdutosUSD + valorFreteSeguroUSD;
-          const valorAduaneiroBRL = valorAduaneiroUSD * dolar;
-          const impostoImportBRL = (valorAduaneiroUSD * (impImp / 100)) * dolar;
-          const taxaCourierBRL = tCourier * dolar;
-          const aliquotaICMS = vIcms / 100;
-          const baseICMS = (valorAduaneiroBRL + impostoImportBRL + taxaCourierBRL) / (1 - aliquotaICMS);
-          const icmsBRL = (aliquotaICMS > 0 && aliquotaICMS < 1) ? baseICMS * aliquotaICMS : 0;
-          const totalImpostosBRL = impostoImportBRL + icmsBRL;
-          const custoTotalImportacaoBRL = valorAduaneiroBRL + impostoImportBRL + icmsBRL + taxaCourierBRL;
-          const custoUnitarioFinalBRL = q > 0 ? custoTotalImportacaoBRL / q : 0;
-
-          useEffect(() => {
-            if (custoUnitarioFinalBRL > 0) {
-              setPrecificacao(prev => ({ ...prev, custoProduto: custoUnitarioFinalBRL.toFixed(2).replace('.', ',') }));
-            }
-          }, [custoUnitarioFinalBRL]);
-
-          const handleImportChange = (e) => {
-            const { name, value } = e.target;
-            setInputs(prev => ({ ...prev, [name]: value }));
-          };
-
-          const handlePrecoChange = (e) => {
-            const { name, value } = e.target;
-            setPrecificacao(prev => ({ ...prev, [name]: value }));
-          };
-
-          const calcularVenda = () => {
-            const cFinal = parseNum(precificacao.custoProduto);
-            const emb = parseNum(precificacao.embalagem);
-            const impVenda = parseNum(precificacao.impostoVenda) / 100;
-            const lucro = parseNum(precificacao.lucroDesejado) / 100;
-            const taxaML = parseNum(precificacao.taxaMkt) / 100;
-
-            for (let p = cFinal + emb; p <= 50000; p += 0.05) {
-              let f = 0;
-              let com = platform === 'ML' ? taxaML : 0.20;
-              if (platform === 'SHOPEE') {
-                 if (p <= 79.99) { f = 4; com = 0.20; }
-                 else { f = 20; com = 0.14; }
-              } else {
-                const idx = mlPriceTiers.findIndex(t => p <= t);
-                const pos = idx === -1 ? 7 : idx;
-                if (p < 79) { f = 6.00; } 
-                else { f = mlRates[precificacao.peso] ? mlRates[precificacao.peso][pos] : 0; }
-              }
-              const liq = p - (cFinal + emb + f + (p * com) + (p * impVenda));
-              if (p > 0 && (liq / p) >= lucro) {
-                return { preco: p, lucroLiq: liq, frete: f };
-              }
-            }
-            return { preco: 0, lucroLiq: 0, frete: 0 };
-          };
-
-          const resVenda = calcularVenda();
-          const qtdParaLucro = q > 0 ? q : 1; 
-          const lucroTotal = resVenda.lucroLiq * qtdParaLucro;
-          const cFinalEditado = parseNum(precificacao.custoProduto);
-          const roi = cFinalEditado > 0 ? (resVenda.lucroLiq / cFinalEditado) * 100 : 0;
-          const fmtBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-          const fmtUSD = (v) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
-          const theme = {
-            bg: isDarkMode ? 'bg-[#020617]' : 'bg-slate-50',
-            text: isDarkMode ? 'text-slate-100' : 'text-slate-900',
-            card: isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200',
-            highlight: 'text-amber-400'
-          };
-
-          return (
-            <div className={`min-h-screen ${theme.bg} ${theme.text} font-sans p-4 md:p-8 transition-colors duration-300`}>
-                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center mb-10 relative">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                        {/* SEU LOGO AQUI */}
-                        <img src="logo.png" alt="Logo" className="h-20 w-auto object-contain rounded-lg" />
-                        
-                        <div className="text-center md:text-left">
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-                                Calculadora <span className={theme.highlight}>Importação & Precificação</span>
-                            </h1>
-                            <p className="text-slate-500 font-medium">Desenvolvido por Adriano Santos</p>
-                        </div>
-                    </div>
-                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`mt-4 md:mt-0 p-3 rounded-full border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-yellow-400' : 'bg-white border-slate-200 text-slate-600'} shadow-lg transition-all hover:scale-110`}>
-                        {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
-                    </button>
-                </div>
-
-                <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    {/* COL 1: IMPORTAÇÃO */}
-                    <div className="space-y-6">
-                        <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-                            <div className="absolute left-0 top-0 h-full w-1.5 bg-amber-500"></div>
-                            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-amber-500 mb-2">
-                                <AlertTriangle size={18} /> Atenção: Anuências
-                            </h3>
-                            <p className="text-xs text-slate-400 mb-4 leading-relaxed">Antes de importar, verifique se o NCM exige Licença de Importação (Anvisa, Inmetro, etc).</p>
-                            <a href="https://www4.receita.fazenda.gov.br/simulador/" target="_blank" className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-xs font-bold uppercase tracking-wide transition-all hover:bg-slate-800 ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-300 bg-white text-slate-700'}`}>
-                                Consultar NCM Oficial <ExternalLink size={14} />
-                            </a>
-                        </div>
-                        <div className={`rounded-3xl border p-6 shadow-2xl ${theme.card}`}>
-                            <h2 className="flex items-center gap-2 text-lg font-bold mb-6"><Package className="text-amber-500" /> Dados Básicos (Compra)</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InputGroup label="Dólar Hoje" value={inputs.cotacaoDolar} onChange={handleImportChange} name="cotacaoDolar" isYellow isDark={isDarkMode} hint={dolarStatus} />
-                                <div className="col-span-1">
-                                    <label className="mb-1.5 block text-xs font-bold uppercase text-slate-500">Produto</label>
-                                    <input type="text" name="nomeProduto" value={inputs.nomeProduto} onChange={handleImportChange} className={`w-full rounded-xl border px-4 py-3 font-bold outline-none transition-all focus:ring-2 focus:ring-amber-500 ${isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'}`} />
-                                </div>
-                                <InputGroup label="Custo Unit (USD)" value={inputs.custoUnitario} onChange={handleImportChange} name="custoUnitario" isYellow isDark={isDarkMode} />
-                                <InputGroup label="Quantidade" value={inputs.quantidade} onChange={handleImportChange} name="quantidade" isYellow isDark={isDarkMode} />
-                                <InputGroup label="Frete Int. (USD)" value={inputs.freteInternacional} onChange={handleImportChange} name="freteInternacional" isYellow isDark={isDarkMode} />
-                                <InputGroup label="Seguro (USD)" value={inputs.seguroInternacional} onChange={handleImportChange} name="seguroInternacional" isYellow isDark={isDarkMode} />
-                            </div>
-                        </div>
-                         <div className={`rounded-3xl border p-6 shadow-2xl ${theme.card}`}>
-                            <h2 className="flex items-center gap-2 text-lg font-bold mb-6"><Percent className="text-amber-500" /> Impostos</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InputGroup label="Imp. Importação %" value={inputs.impostoImportacao} onChange={handleImportChange} name="impostoImportacao" isDark={isDarkMode} />
-                                <InputGroup label="ICMS Estado %" value={inputs.icms} onChange={handleImportChange} name="icms" isDark={isDarkMode} />
-                                <div className="col-span-2">
-                                    <InputGroup label="Taxa Courier (USD)" value={inputs.taxaCourier} onChange={handleImportChange} name="taxaCourier" isDark={isDarkMode} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* COL 2: RESULTADOS */}
-                    <div className={`flex h-full flex-col rounded-3xl border p-8 shadow-2xl ${theme.card}`}>
-                        <div className="mb-6 border-b border-slate-700/50 pb-6">
-                            <h2 className="flex items-center gap-2 text-xl font-bold"><Calculator className="text-emerald-500" /> Custo da Importação</h2>
-                        </div>
-                        <div className="space-y-6 mb-8">
-                            <ResultRow label="Valor Aduaneiro" valUSD={fmtUSD(valorAduaneiroUSD)} valBRL={fmtBRL(valorAduaneiroBRL)} isDark={isDarkMode} />
-                            <ResultRow label="Imp. Importação" valUSD="" valBRL={fmtBRL(impostoImportBRL)} highlight isDark={isDarkMode} />
-                            <ResultRow label="ICMS Total" valUSD="" valBRL={fmtBRL(icmsBRL)} highlight isDark={isDarkMode} />
-                        </div>
-                        <div className="flex-1 space-y-4 pt-4 border-t border-slate-700/50">
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Resumo da Operação</p>
-                            <SummaryRow label="Total Produtos" value={fmtBRL(valorTotalProdutosBRL)} isDark={isDarkMode} />
-                            <SummaryRow label="Frete + Seguro" value={fmtBRL(valorFreteSeguroBRL)} isDark={isDarkMode} />
-                            <SummaryRow label="Impostos (II + ICMS)" value={fmtBRL(totalImpostosBRL)} isDark={isDarkMode} />
-                            <SummaryRow label="Taxa Courier" value={fmtBRL(taxaCourierBRL)} isDark={isDarkMode} />
-                            <div className="mt-6 pt-4 border-t border-slate-700/50 text-center">
-                                <p className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-1">Total da Importação</p>
-                                <p className="text-3xl font-black text-amber-400">{fmtBRL(custoTotalImportacaoBRL)}</p>
-                            </div>
-                        </div>
-                        <div className="mt-8 rounded-2xl border border-slate-700/50 bg-slate-950 p-6 text-center">
-                            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Custo Unitário Final</p>
-                            <p className="text-4xl font-black text-white">{fmtBRL(custoUnitarioFinalBRL)}</p>
-                        </div>
-                    </div>
-
-                    {/* COL 3: PRECIFICAÇÃO */}
-                    <div className={`flex h-full flex-col rounded-3xl border shadow-2xl overflow-hidden ${theme.card}`}>
-                        <div className="flex border-b border-slate-700/50">
-                            <button onClick={() => setPlatform('ML')} className={`flex-1 py-4 text-sm font-black uppercase tracking-wide transition-colors ${platform === 'ML' ? 'bg-yellow-500 text-black' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Mercado Livre</button>
-                            <button onClick={() => setPlatform('SHOPEE')} className={`flex-1 py-4 text-sm font-black uppercase tracking-wide transition-colors ${platform === 'SHOPEE' ? 'bg-orange-600 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Shopee</button>
-                        </div>
-                        <div className="p-8 flex-1 flex flex-col">
-                            <h2 className="flex items-center gap-2 text-xl font-bold mb-6">
-                                <TrendingUp className={platform === 'ML' ? 'text-yellow-500' : 'text-orange-500'} /> Precificação Inteligente
-                            </h2>
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="col-span-2">
-                                    <InputGroup label="Custo do Produto (R$)" value={precificacao.custoProduto} onChange={handlePrecoChange} name="custoProduto" hint="Nacional/Importado" isDark={isDarkMode} />
-                                </div>
-                                <InputGroup label="Imposto Venda %" value={precificacao.impostoVenda} onChange={handlePrecoChange} name="impostoVenda" isDark={isDarkMode} />
-                                <InputGroup label="Embalagem R$" value={precificacao.embalagem} onChange={handlePrecoChange} name="embalagem" isDark={isDarkMode} />
-                                {platform === 'ML' && (
-                                    <>
-                                        <InputGroup label="Taxa Categoria %" value={precificacao.taxaMkt} onChange={handlePrecoChange} name="taxaMkt" isDark={isDarkMode} />
-                                        <div className="col-span-1">
-                                            <label className={`mb-1.5 block text-xs font-bold uppercase ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>Peso (Frete)</label>
-                                            <select name="peso" value={precificacao.peso} onChange={handlePrecoChange} className={`w-full rounded-xl border px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500 ${isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'}`}>
-                                                {Object.keys(mlRates).map(p => <option key={p} value={p}>{p}</option>)}
-                                            </select>
-                                        </div>
-                                    </>
-                                )}
-                                <div className="col-span-2 mt-2">
-                                    <InputGroup label="Lucro Líquido Desejado %" value={precificacao.lucroDesejado} onChange={handlePrecoChange} name="lucroDesejado" isYellow isDark={isDarkMode} />
-                                </div>
-                            </div>
-                            <div className="mt-auto bg-slate-950 rounded-2xl p-6 border border-slate-800 text-center relative overflow-hidden group">
-                                <div className={`absolute top-0 left-0 w-full h-1 ${platform === 'ML' ? 'bg-yellow-500' : 'bg-orange-500'}`}></div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Preço de Venda Sugerido</p>
-                                <p className={`text-5xl font-black mb-4 ${platform === 'ML' ? 'text-yellow-400' : 'text-orange-500'}`}>
-                                    {fmtBRL(resVenda.preco)}
-                                </p>
-                                <div className="grid grid-cols-2 gap-4 text-left pt-4 border-t border-slate-800">
-                                    <div>
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Lucro Unitário</p>
-                                        <p className="text-emerald-400 font-bold text-lg">{fmtBRL(resVenda.lucroLiq)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold">ROI</p>
-                                        <p className="text-emerald-400 font-bold text-lg">{roi.toFixed(1)}%</p>
-                                    </div>
-                                     <div>
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Frete Desc.</p>
-                                        <p className="text-red-400 font-bold text-sm">-{fmtBRL(resVenda.frete)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-500 uppercase font-bold">Lucro Estoque</p>
-                                        <p className="text-amber-400 font-bold text-sm">{fmtBRL(lucroTotal)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-          );
-        }
-
-        function InputGroup({ label, value, onChange, name, isYellow, hint, isDark }) {
-            const darkClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 placeholder-slate-700' : 'bg-[#1e293b] border-slate-700 text-slate-200 focus:bg-slate-800';
-            const lightClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 placeholder-slate-700' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white';
-            return (
-                <div className="col-span-1">
-                    <label className={`mb-1.5 flex justify-between text-xs font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {label} {hint && <span className="text-emerald-500 font-normal normal-case">({hint})</span>}
-                    </label>
-                    <input type="text" name={name} value={value} onChange={onChange} className={`w-full rounded-xl border px-4 py-3 font-bold outline-none transition-all focus:ring-2 focus:ring-amber-500 ${isDark ? darkClass : lightClass}`} />
-                </div>
-            );
-        }
-
-        function ResultRow({ label, valUSD, valBRL, highlight, isDark }) {
-            const lblColor = isDark ? (highlight ? 'text-slate-300' : 'text-slate-500') : (highlight ? 'text-slate-700' : 'text-slate-600');
-            const brlColor = highlight ? 'text-red-500' : (isDark ? 'text-slate-200' : 'text-slate-900');
-            return (
-                <div className={`flex justify-between items-end border-b pb-2 last:border-0 ${isDark ? 'border-slate-800' : 'border-slate-300'}`}>
-                    <span className={`text-sm font-medium ${lblColor}`}>{label}</span>
-                    <div className="text-right">
-                        {valUSD && <span className="block text-xs font-bold text-slate-500">{valUSD}</span>}
-                        <span className={`block font-bold ${brlColor}`}>{valBRL}</span>
-                    </div>
-                </div>
-            );
-        }
-        
-        function SummaryRow({ label, value, isDark }) {
-            return (
-                <div className="flex justify-between items-center text-sm mb-2">
-                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{label}</span>
-                    <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{value}</span>
-                </div>
-            );
-        }
-
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('App pronto para uso offline!'))
-                    .catch(err => console.log('Erro PWA:', err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW falhou:', err));
             });
         }
+    </script>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { Calculator, Package, TrendingUp, AlertTriangle, ExternalLink, Percent, Info, Plane, Truck, Sun, Moon, CheckCircle2, ShoppingBag, Ruler, Crown, Star, X, Lock, Mail, LogOut } from 'https://esm.sh/lucide-react@0.292.0';
+
+        // ==========================================
+        // CONFIGURAÇÕES DO SUPABASE (PREENCHA AQUI)
+        // ==========================================
+        const SUPABASE_URL = 'SUA_URL_AQUI';
+        const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_AQUI';
+        
+        // Inicializa o Client do Supabase (O v2 usa localStorage nativamente)
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ==========================================
+        // COMPONENTE DE LOGIN (BLINDADO)
+        // ==========================================
+        function LoginScreen() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) setError('Credenciais inválidas. Verifique seu e-mail e senha.');
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-3xl p-8 shadow-2xl animate-fade-in">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                                <Lock size={32} weight="bold" />
+                            </div>
+                            <h1 className="text-2xl font-black text-white tracking-tight">Área Restrita</h1>
+                            <p className="text-slate-400 text-sm mt-1">Faça login para acessar a calculadora</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">E-mail de Acesso</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-3 text-slate-500" size={18} />
+                                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2.5 pl-10 pr-3 text-sm focus:border-amber-500 outline-none transition-colors" placeholder="seu@email.com" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Senha</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-3 text-slate-500" size={18} />
+                                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2.5 pl-10 pr-3 text-sm focus:border-amber-500 outline-none transition-colors" placeholder="••••••••" />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-xs font-bold">
+                                    <AlertTriangle size={14} /> {error}
+                                </div>
+                            )}
+
+                            <button type="submit" disabled={loading} className="w-full py-3.5 mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black text-sm uppercase tracking-wider shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {loading ? 'Autenticando...' : 'Entrar no Sistema'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // CÓDIGO ORIGINAL DA CALCULADORA
+        // ==========================================
+        const mlRates = [
+            { maxWeight: 0.3, label: "Até 0,3 kg", rates: [5.65, 6.55, 7.75, 12.35, 14.35, 16.45, 18.45, 20.95], fastFreeRate: 12.35 },
+            { maxWeight: 0.5, label: "De 0,3 a 0,5 kg", rates: [5.95, 6.65, 7.85, 13.25, 15.45, 17.65, 19.85, 22.55], fastFreeRate: 13.25 },
+            { maxWeight: 1.0, label: "De 0,5 a 1 kg", rates: [6.05, 6.75, 7.95, 13.85, 16.15, 18.45, 20.75, 23.65], fastFreeRate: 13.85 },
+            { maxWeight: 1.5, label: "De 1 a 1,5 kg", rates: [6.15, 6.85, 8.05, 14.15, 16.45, 18.85, 21.15, 24.65], fastFreeRate: 14.15 },
+            { maxWeight: 2.0, label: "De 1,5 a 2 kg", rates: [6.25, 6.95, 8.15, 14.45, 16.85, 19.25, 21.65, 24.65], fastFreeRate: 14.45 },
+            { maxWeight: 3.0, label: "De 2 a 3 kg", rates: [6.35, 7.95, 8.55, 15.75, 18.35, 21.05, 23.65, 26.25], fastFreeRate: 15.75 },
+            { maxWeight: 4.0, label: "De 3 a 4 kg", rates: [6.45, 8.15, 8.95, 17.05, 19.85, 22.65, 25.55, 28.35], fastFreeRate: 17.05 },
+            { maxWeight: 5.0, label: "De 4 a 5 kg", rates: [6.55, 8.35, 9.75, 18.45, 21.55, 24.65, 27.75, 30.75], fastFreeRate: 18.45 },
+            { maxWeight: 6.0, label: "De 5 a 6 kg", rates: [6.65, 8.55, 9.95, 25.45, 28.55, 32.65, 35.75, 39.75], fastFreeRate: 25.45 },
+            { maxWeight: 7.0, label: "De 6 a 7 kg", rates: [6.75, 8.75, 10.15, 27.05, 31.05, 36.05, 40.05, 44.05], fastFreeRate: 27.05 },
+            { maxWeight: 8.0, label: "De 7 a 8 kg", rates: [6.85, 8.95, 10.35, 28.85, 33.65, 38.45, 43.25, 48.05], fastFreeRate: 28.85 },
+            { maxWeight: 9.0, label: "De 8 a 9 kg", rates: [6.95, 9.15, 10.55, 29.65, 34.55, 39.55, 44.45, 49.35], fastFreeRate: 29.65 },
+            { maxWeight: 11.0, label: "De 9 a 11 kg", rates: [7.05, 9.55, 10.95, 41.25, 48.05, 54.95, 61.75, 68.65], fastFreeRate: 41.25 },
+            { maxWeight: 13.0, label: "De 11 a 13 kg", rates: [7.15, 9.95, 11.35, 42.15, 49.25, 56.25, 63.25, 70.25], fastFreeRate: 42.15 },
+            { maxWeight: 15.0, label: "De 13 a 15 kg", rates: [7.25, 10.15, 11.55, 45.05, 52.45, 59.95, 67.45, 74.95], fastFreeRate: 45.05 },
+            { maxWeight: 17.0, label: "De 15 a 17 kg", rates: [7.35, 10.35, 11.75, 48.55, 56.05, 63.55, 70.75, 78.65], fastFreeRate: 48.55 },
+            { maxWeight: 20.0, label: "De 17 a 20 kg", rates: [7.45, 10.55, 11.95, 54.75, 63.85, 72.95, 82.05, 91.15], fastFreeRate: 54.75 },
+            { maxWeight: 25.0, label: "De 20 a 25 kg", rates: [7.65, 10.95, 12.15, 64.05, 75.05, 84.75, 95.35, 105.95], fastFreeRate: 64.05 },
+            { maxWeight: 30.0, label: "De 25 a 30 kg", rates: [7.75, 11.15, 12.35, 65.95, 75.45, 85.55, 96.25, 106.95], fastFreeRate: 65.95 },
+            { maxWeight: 40.0, label: "De 30 a 40 kg", rates: [7.85, 11.35, 12.55, 67.75, 78.95, 88.95, 99.15, 107.05], fastFreeRate: 67.75 },
+            { maxWeight: 50.0, label: "De 40 a 50 kg", rates: [7.95, 11.55, 12.75, 70.25, 81.05, 92.05, 102.55, 110.75], fastFreeRate: 70.25 },
+            { maxWeight: 60.0, label: "De 50 a 60 kg", rates: [8.05, 11.75, 12.95, 74.95, 86.45, 98.15, 109.35, 118.15], fastFreeRate: 74.95 },
+            { maxWeight: 70.0, label: "De 60 a 70 kg", rates: [8.15, 11.95, 13.15, 80.25, 92.95, 105.05, 117.15, 126.55], fastFreeRate: 80.25 },
+            { maxWeight: 80.0, label: "De 70 a 80 kg", rates: [8.25, 12.15, 13.35, 83.95, 97.05, 109.85, 122.45, 132.25], fastFreeRate: 83.95 },
+            { maxWeight: 90.0, label: "De 80 a 90 kg", rates: [8.35, 12.35, 13.55, 93.25, 107.45, 122.05, 136.05, 146.95], fastFreeRate: 93.25 },
+            { maxWeight: 100.0, label: "De 90 a 100 kg", rates: [8.45, 12.55, 13.75, 106.55, 123.95, 139.55, 155.55, 167.95], fastFreeRate: 106.55 },
+            { maxWeight: 125.0, label: "De 100 a 125 kg", rates: [8.55, 12.75, 13.95, 119.25, 138.05, 156.05, 173.95, 187.95], fastFreeRate: 119.25 },
+            { maxWeight: 150.0, label: "De 125 a 150 kg", rates: [8.65, 12.75, 14.15, 126.55, 146.15, 165.65, 184.65, 199.45], fastFreeRate: 126.55 },
+            { maxWeight: Infinity, label: "Mais de 150 kg", rates: [8.75, 12.95, 14.35, 166.15, 192.45, 217.55, 242.55, 261.95], fastFreeRate: 166.15 }
+        ];
+
+        const mlPriceTiers = [18.99, 48.99, 78.99, 99.99, 119.99, 149.99, 199.99, Infinity];
+        const mlTierNames = ["Até R$ 18,99", "R$ 19 a R$ 48,99", "R$ 49 a R$ 78,99", "R$ 79 a R$ 99,99", "R$ 100 a R$ 119,99", "R$ 120 a R$ 149,99", "R$ 150 a R$ 199,99", "Acima de R$ 200"];
+
+        const formatCurrency = (value) => {
+            if (!value) return "0,00";
+            const numericValue = String(value).replace(/\D/g, "");
+            if (numericValue === "") return "0,00";
+            const floatValue = (Number(numericValue) / 100).toFixed(2);
+            return floatValue.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        };
+
+        const parseCurrency = (val) => {
+            if (!val) return 0;
+            if (typeof val === 'number') return val;
+            return Number(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+        };
+
+        const parsePercent = (val) => {
+            if (!val) return 0;
+            if (typeof val === 'number') return val;
+            return Number(String(val).replace(',', '.')) || 0;
+        };
+
+        function App() {
+            const [isDarkMode, setIsDarkMode] = useState(true);
+            const [dolarStatus, setDolarStatus] = useState('buscando');
+
+            const [inputs, setInputs] = useState({
+                cotacaoDolar: '5,1400', nomeProduto: '', custoUnitario: '', quantidade: '', freteInternacional: '', seguroInternacional: '', impostoImportacao: '60', icms: '18', taxaCourier: '18,80'
+            });
+
+            const [importResult, setImportResult] = useState(null);
+            const [erroImport, setErroImport] = useState('');
+
+            const [platform, setPlatform] = useState('ML');
+            const [custoProduto, setCustoProduto] = useState('');
+            const [embalagem, setEmbalagem] = useState('');
+            const [impostoVenda, setImpostoVenda] = useState('');
+            const [lucroDesejado, setLucroDesejado] = useState('20');
+            const [taxaMarketplace, setTaxaMarketplace] = useState('10');
+            const [pesoInput, setPesoInput] = useState('');
+            const [isPremium, setIsPremium] = useState(false);
+            const [ofereceFreteGratis, setOfereceFreteGratis] = useState(false);
+
+            const [showCubagem, setShowCubagem] = useState(false);
+            const [dimensao, setDimensao] = useState({ c: '', l: '', a: '', pFisico: '' });
+            const [resultadoFinal, setResultadoFinal] = useState(null);
+            const [erroVenda, setErroVenda] = useState('');
+
+            useEffect(() => {
+                const fetchDolar = async () => {
+                    try {
+                        const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+                        const data = await res.json();
+                        if (data?.USDBRL?.bid) {
+                            setInputs(prev => ({ ...prev, cotacaoDolar: parseFloat(data.USDBRL.bid).toFixed(4).replace('.', ',') }));
+                            setDolarStatus('auto');
+                        }
+                    } catch (e) { setDolarStatus('manual'); }
+                };
+                fetchDolar();
+            }, []);
+
+            const handleTogglePremium = (toPremium) => {
+                if (isPremium === toPremium) return;
+                setIsPremium(toPremium);
+                const currentTaxa = parsePercent(taxaMarketplace);
+                if (toPremium) {
+                    setTaxaMarketplace(String(currentTaxa + 5).replace('.', ','));
+                } else {
+                    setTaxaMarketplace(String(Math.max(currentTaxa - 5, 10)).replace('.', ','));
+                }
+            };
+
+            const calcularImportacao = () => {
+                setErroImport('');
+                const qReal = parsePercent(inputs.quantidade);
+                const q = qReal > 0 ? qReal : 1; 
+                const dolar = parsePercent(inputs.cotacaoDolar);
+                
+                if (dolar <= 0) {
+                    setErroImport('O Dólar não pode ser zero.');
+                    setImportResult(null); return;
+                }
+
+                const vProdUSD = parseCurrency(inputs.custoUnitario) * qReal;
+                const vFreteSegUSD = parseCurrency(inputs.freteInternacional) + parseCurrency(inputs.seguroInternacional);
+                const vAduaneiroBRL = (vProdUSD + vFreteSegUSD) * dolar;
+                
+                const impImportBRL = vAduaneiroBRL * (parsePercent(inputs.impostoImportacao) / 100);
+                const tCourierBRL = parseCurrency(inputs.taxaCourier) * dolar;
+                
+                const aliquotaICMS = parsePercent(inputs.icms) / 100;
+                let icmsBRL = 0;
+                if (aliquotaICMS > 0 && aliquotaICMS < 1) {
+                    const baseICMS = (vAduaneiroBRL + impImportBRL + tCourierBRL) / (1 - aliquotaICMS);
+                    icmsBRL = baseICMS * aliquotaICMS;
+                }
+                
+                const totalImpBRL = (vProdUSD * dolar) + (vFreteSegUSD * dolar) + impImportBRL + icmsBRL + tCourierBRL;
+                const custoUnitFinalBRL = totalImpBRL / q;
+
+                setImportResult({ vProdUSD, dolar, vFreteSegUSD, impImportBRL, icmsBRL, tCourierBRL, totalImpBRL, custoUnitFinalBRL });
+
+                if (custoUnitFinalBRL > 0) {
+                    setCustoProduto(formatCurrency(custoUnitFinalBRL.toFixed(2).replace('.', ',')));
+                    setResultadoFinal(null);
+                }
+            };
+
+            const calcularVenda = () => {
+                setErroVenda('');
+                const custo = parseCurrency(custoProduto);
+                const emb = parseCurrency(embalagem);
+                const impPct = parsePercent(impostoVenda) / 100;
+                const lucroAlvoPct = parsePercent(lucroDesejado) / 100;
+                const peso = parsePercent(pesoInput);
+                const taxaMktBase = parsePercent(taxaMarketplace) / 100;
+
+                const basePct = platform === 'ML' ? (impPct + lucroAlvoPct + taxaMktBase + (isPremium ? 0.05 : 0)) : (impPct + lucroAlvoPct + 0.20); 
+                if (basePct >= 1) {
+                    setErroVenda("A soma das margens não pode ser 100% ou mais.");
+                    setResultadoFinal(null); return;
+                }
+                if (custo <= 0) {
+                    setErroVenda('Informe o Custo do Produto para iniciar.');
+                    setResultadoFinal(null); return;
+                }
+                if (platform === 'ML' && peso <= 0) {
+                    setErroVenda('Informe o peso do produto para o Mercado Livre.');
+                    setResultadoFinal(null); return;
+                }
+
+                let melhorResultado = null;
+                for (let p = custo + emb; p <= 50000; p += 0.01) {
+                    let comissaoVenda = 0, custoFixoMkt = 0, freteVendedor = 0, margemMktUsada = 0, nomeFaixaPreco = "", nomeFaixaPeso = "";
+
+                    if (platform === 'SHOPEE') {
+                        if (p <= 79.99) { margemMktUsada = 0.20; custoFixoMkt = 4; }
+                        else if (p <= 99.99) { margemMktUsada = 0.14; custoFixoMkt = 16; }
+                        else if (p <= 199.99) { margemMktUsada = 0.14; custoFixoMkt = 20; }
+                        else { margemMktUsada = 0.14; custoFixoMkt = 26; }
+                        comissaoVenda = p * margemMktUsada;
+                    } else {
+                        margemMktUsada = taxaMktBase + (isPremium ? 0.05 : 0);
+                        comissaoVenda = p * margemMktUsada;
+                        let tierIdx = mlPriceTiers.findIndex(t => p <= t);
+                        if (tierIdx === -1) tierIdx = mlPriceTiers.length - 1;
+                        nomeFaixaPreco = mlTierNames[tierIdx];
+                        
+                        let pesoObj = mlRates.find(item => peso <= item.maxWeight) || mlRates[mlRates.length - 1];
+                        let tarifaFrete = pesoObj.rates[tierIdx];
+                        nomeFaixaPeso = pesoObj.label;
+
+                        if (p < 79) {
+                            if (ofereceFreteGratis) { freteVendedor = pesoObj.fastFreeRate; custoFixoMkt = 0; } 
+                            else { custoFixoMkt = tarifaFrete; freteVendedor = 0; }
+                        } else { custoFixoMkt = 0; freteVendedor = tarifaFrete; }
+                    }
+
+                    const vImposto = p * impPct;
+                    const custosTotais = custo + emb + custoFixoMkt + freteVendedor + comissaoVenda + vImposto;
+                    const lucroLiq = p - custosTotais;
+                    const lucroRealPct = lucroLiq / p;
+
+                    if (lucroRealPct >= lucroAlvoPct) {
+                        melhorResultado = {
+                            precoSugerido: p, lucroLiq, lucroPct: lucroRealPct * 100, frete: freteVendedor, taxaFixa: custoFixoMkt,
+                            comissao: comissaoVenda, imposto: vImposto, custoBase: custo + emb, margemMkt: margemMktUsada * 100,
+                            faixa: platform === 'ML' ? `${nomeFaixaPeso} | ${nomeFaixaPreco}` : ''
+                        };
+                        break;
+                    }
+                }
+
+                if (melhorResultado) setResultadoFinal(melhorResultado);
+                else { setErroVenda('Não foi possível encontrar um preço viável com essas margens.'); setResultadoFinal(null); }
+            };
+
+            const handleImportChangeText = (e) => setInputs({...inputs, [e.target.name]: e.target.value});
+            const handleCurrencyInput = (setter) => (e) => {
+                const val = e.target.value;
+                if (val === "") setter(""); else setter(formatCurrency(val));
+            };
+            const handlePercentInput = (setter) => (e) => {
+                let val = String(e.target.value).replace(/[^0-9,]/g, '');
+                setter(val);
+            };
+
+            const handleCubagem = () => {
+                const pCubico = (parsePercent(dimensao.c) * parsePercent(dimensao.l) * parsePercent(dimensao.a)) / 6000;
+                const final = Math.max(parsePercent(dimensao.pFisico), pCubico);
+                if (final > 0) setPesoInput(final.toFixed(2).replace('.', ','));
+                setShowCubagem(false);
+            };
+
+            const theme = {
+                bg: isDarkMode ? 'bg-[#020617]' : 'bg-slate-50',
+                text: isDarkMode ? 'text-slate-100' : 'text-slate-900',
+                card: isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200',
+            };
+
+            return (
+                <div className={`min-h-screen ${theme.bg} ${theme.text} font-sans p-4 md:p-8 transition-colors duration-300`}>
+                    <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                        <div className="text-center md:text-left">
+                            <h1 className="text-3xl font-black tracking-tight mb-1">Calculadora <span className="text-amber-400">Importação & Precificação</span></h1>
+                            <p className="text-slate-500 text-sm font-medium italic">Versão Pro 2026 • Adriano Santos</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {/* Botão de Sair adicionado */}
+                            <button onClick={() => supabase.auth.signOut()} className={`text-xs font-bold uppercase flex items-center gap-1 transition-colors ${isDarkMode ? 'text-slate-500 hover:text-red-500' : 'text-slate-400 hover:text-red-500'}`}>
+                                <LogOut size={16} /> Sair
+                            </button>
+                            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-full border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-yellow-400' : 'bg-white border-slate-200 text-slate-600'} shadow-lg hover:scale-105 transition-all`}>
+                                {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                        {/* COLUNA 1: DADOS IMPORTAÇÃO */}
+                        <div className="space-y-6 flex flex-col h-full">
+                            <div className={`rounded-3xl border p-6 shadow-xl ${theme.card}`}>
+                                <h2 className="flex items-center gap-2 text-lg font-bold mb-5 text-amber-500"><Plane size={20}/> Custos de Origem</h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InputGroup label="Dólar" name="cotacaoDolar" value={inputs.cotacaoDolar} onChange={handlePercentInput((val) => setInputs({...inputs, cotacaoDolar: val}))} isYellow isDark={isDarkMode} hint={dolarStatus} placeholder="Ex: 5,14" />
+                                    <InputGroup label="Produto" name="nomeProduto" value={inputs.nomeProduto} onChange={handleImportChangeText} isDark={isDarkMode} placeholder="Nome" />
+                                    <InputGroup label="Custo Unit(USD)" name="custoUnitario" value={inputs.custoUnitario} onChange={handleCurrencyInput((v) => setInputs(p=>({...p, custoUnitario: v})))} isYellow isDark={isDarkMode} placeholder="0,00" />
+                                    <InputGroup label="Quantidade" name="quantidade" value={inputs.quantidade} onChange={handlePercentInput((v) => setInputs(p=>({...p, quantidade: v})))} isYellow isDark={isDarkMode} placeholder="0" />
+                                    <InputGroup label="Frete Int(USD)" name="freteInternacional" value={inputs.freteInternacional} onChange={handleCurrencyInput((v) => setInputs(p=>({...p, freteInternacional: v})))} isYellow isDark={isDarkMode} placeholder="0,00" />
+                                    <InputGroup label="Seguro (USD)" name="seguroInternacional" value={inputs.seguroInternacional} onChange={handleCurrencyInput((v) => setInputs(p=>({...p, seguroInternacional: v})))} isYellow isDark={isDarkMode} placeholder="0,00" />
+                                </div>
+                            </div>
+                            <div className={`rounded-3xl border p-6 shadow-xl flex-1 flex flex-col justify-between ${theme.card}`}>
+                                <div>
+                                    <h2 className="flex items-center gap-2 text-lg font-bold mb-5 text-amber-500"><Percent size={20}/> Impostos Aduaneiros</h2>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Imp. Importação %" name="impostoImportacao" value={inputs.impostoImportacao} onChange={handlePercentInput((v) => setInputs(p=>({...p, impostoImportacao: v})))} isDark={isDarkMode} />
+                                        <InputGroup label="ICMS Estado %" name="icms" value={inputs.icms} onChange={handlePercentInput((v) => setInputs(p=>({...p, icms: v})))} isDark={isDarkMode} />
+                                        <div className="col-span-2">
+                                            <InputGroup label="Taxa Courier (USD)" name="taxaCourier" value={inputs.taxaCourier} onChange={handleCurrencyInput((v) => setInputs(p=>({...p, taxaCourier: v})))} isDark={isDarkMode} placeholder="0,00" />
+                                        </div>
+                                    </div>
+                                    {erroImport && <div className="mt-3 p-2 bg-red-500/10 text-red-400 text-xs font-bold rounded-lg"><AlertTriangle size={14} className="inline mr-1"/> {erroImport}</div>}
+                                </div>
+                                <button onClick={calcularImportacao} className="w-full mt-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2 text-sm tracking-wide">
+                                    <Calculator size={20} /> CALCULAR IMPORTAÇÃO
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* COLUNA 2: RESUMO IMPORTAÇÃO */}
+                        <div className={`flex flex-col rounded-3xl border p-8 shadow-xl ${theme.card}`}>
+                            <h2 className="flex items-center gap-2 text-xl font-bold mb-6 text-emerald-500"><Calculator /> Resultados da Importação</h2>
+                            {importResult ? (
+                                <div className="space-y-4 flex-1 animate-fade-in">
+                                    <SummaryRow label="Produtos" valUSD={(importResult.vProdUSD).toLocaleString('en-US',{style:'currency',currency:'USD'})} valBRL={(importResult.vProdUSD * importResult.dolar).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} isDark={isDarkMode} />
+                                    <SummaryRow label="Frete e Seguro" valUSD={(importResult.vFreteSegUSD).toLocaleString('en-US',{style:'currency',currency:'USD'})} valBRL={(importResult.vFreteSegUSD * importResult.dolar).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} isDark={isDarkMode} />
+                                    <SummaryRow label="Total Impostos" valBRL={(importResult.impImportBRL + importResult.icmsBRL).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} isDark={isDarkMode} />
+                                    <SummaryRow label="Taxa Courier" valBRL={(importResult.tCourierBRL).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} isDark={isDarkMode} />
+                                    
+                                    <div className="mt-8 pt-6 border-t border-slate-700/50 text-center">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500 mb-1">Investimento Total</p>
+                                        <p className="text-4xl font-black text-amber-400">{(importResult.totalImpBRL).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</p>
+                                        <div className="mt-8 p-4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-inner">
+                                            <p className="text-[10px] font-bold uppercase text-slate-500 mb-1">Custo Unitário Final</p>
+                                            <p className="text-4xl font-black text-white">{(importResult.custoUnitFinalBRL).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-800 rounded-3xl text-center">
+                                    <Package className="mx-auto mb-3 text-slate-700" size={32}/>
+                                    <p className="text-slate-500 text-xs uppercase font-bold tracking-wider leading-relaxed">Preencha os custos de origem<br/>e clique em calcular</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* COLUNA 3: PRECIFICAÇÃO INTELIGENTE */}
+                        <div className={`flex flex-col rounded-3xl border shadow-xl overflow-hidden ${theme.card}`}>
+                            <div className="flex border-b border-slate-800">
+                                <button onClick={() => {setPlatform('ML'); setResultadoFinal(null);}} className={`flex-1 py-4 font-black text-xs uppercase tracking-widest transition-all ${platform === 'ML' ? 'bg-yellow-400 text-black' : 'text-slate-500 bg-slate-900/50 hover:text-slate-300'}`}>Mercado Livre</button>
+                                <button onClick={() => {setPlatform('SHOPEE'); setResultadoFinal(null);}} className={`flex-1 py-4 font-black text-xs uppercase tracking-widest transition-all ${platform === 'SHOPEE' ? 'bg-orange-600 text-white' : 'text-slate-500 bg-slate-900/50 hover:text-slate-300'}`}>Shopee</button>
+                            </div>
+
+                            <div className="p-6 flex-1 flex flex-col space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-1 relative">
+                                        <label className={`text-[10px] font-bold uppercase mb-1 block ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>Custo Produto (R$)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-sm">$</span>
+                                            <input type="text" value={custoProduto} onChange={handleCurrencyInput(setCustoProduto)} placeholder="0,00" className={`w-full rounded-xl py-2 pl-7 pr-3 text-sm font-bold outline-none transition-all focus:border-amber-500 border ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'}`} />
+                                        </div>
+                                    </div>
+                                    <InputGroup label="Embalagem R$" value={embalagem} onChange={handleCurrencyInput(setEmbalagem)} isDark={isDarkMode} placeholder="0,00" />
+                                    <InputGroup label="Imposto Venda %" value={impostoVenda} onChange={handlePercentInput(setImpostoVenda)} isDark={isDarkMode} hint="MEI=vazio" placeholder="Ex: 4" />
+                                    
+                                    <div className="col-span-1 relative">
+                                        <label className="text-[10px] font-bold uppercase text-orange-500 mb-1 block">Lucro Desejado</label>
+                                        <div className="relative">
+                                            <input type="text" value={lucroDesejado} onChange={handlePercentInput(setLucroDesejado)} placeholder="20" className="w-full bg-amber-400 border border-amber-500 rounded-xl py-2 pl-3 pr-8 text-sm font-black text-slate-950 placeholder-yellow-700 outline-none focus:bg-amber-300 transition-all" />
+                                            <span className="absolute right-3 top-2.5 text-slate-950 font-black text-sm">%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {platform === 'ML' && (
+                                        <>
+                                            <div className={`col-span-2 p-2.5 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                                                <div className={`flex border rounded-lg p-1 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-300'}`}>
+                                                    <button onClick={() => handleTogglePremium(false)} className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${!isPremium ? 'bg-yellow-400 text-black shadow-lg' : (isDarkMode ? 'text-slate-500 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}><Star size={10} className="inline mr-1"/> Clássico</button>
+                                                    <button onClick={() => handleTogglePremium(true)} className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${isPremium ? 'bg-orange-500 text-white shadow-lg' : (isDarkMode ? 'text-slate-500 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}><Crown size={10} className="inline mr-1"/> Premium +5%</button>
+                                                </div>
+                                                <div className="flex items-center justify-between px-1">
+                                                    <span className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Frete Grátis e Rápido &lt; R$79</span>
+                                                    <button onClick={() => setOfereceFreteGratis(!ofereceFreteGratis)} className={`w-8 h-4 rounded-full transition-colors ${ofereceFreteGratis ? 'bg-orange-500' : (isDarkMode ? 'bg-slate-700' : 'bg-slate-300')} relative`}><div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${ofereceFreteGratis ? 'right-0.5' : 'left-0.5'}`}></div></button>
+                                                </div>
+                                            </div>
+                                            <InputGroup label="Taxa Categoria %" value={taxaMarketplace} onChange={handlePercentInput(setTaxaMarketplace)} isDark={isDarkMode} placeholder="Ex: 10" />
+                                            <div className="relative">
+                                                <label className={`text-[10px] font-bold uppercase mb-1 block ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>Peso kg</label>
+                                                <input type="text" value={pesoInput} onChange={handlePercentInput(setPesoInput)} placeholder="Ex: 0,5" className={`w-full rounded-xl py-2 px-3 text-sm font-bold outline-none transition-all focus:border-orange-500 border ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'}`} />
+                                                <button onClick={() => setShowCubagem(!showCubagem)} className="absolute right-2 top-7 text-orange-500 hover:scale-110 transition-transform"><Ruler size={16}/></button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {showCubagem && (
+                                    <div className={`p-4 rounded-2xl border animate-fade-in space-y-3 shadow-2xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-300'}`}>
+                                        <div className="flex justify-between items-center"><p className="text-[10px] font-bold text-orange-400 uppercase">Calculadora Cubagem</p><button onClick={()=>setShowCubagem(false)} className={isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}><X size={14}/></button></div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <input placeholder="C(cm)" value={dimensao.c} onChange={e=>setDimensao({...dimensao, c: String(e.target.value).replace(/[^0-9,]/g,'')})} className={`p-2 rounded-lg text-xs outline-none focus:border-amber-500 border ${isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-slate-50 text-slate-900 border-slate-200'}`} />
+                                            <input placeholder="L(cm)" value={dimensao.l} onChange={e=>setDimensao({...dimensao, l: String(e.target.value).replace(/[^0-9,]/g,'')})} className={`p-2 rounded-lg text-xs outline-none focus:border-amber-500 border ${isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-slate-50 text-slate-900 border-slate-200'}`} />
+                                            <input placeholder="A(cm)" value={dimensao.a} onChange={e=>setDimensao({...dimensao, a: String(e.target.value).replace(/[^0-9,]/g,'')})} className={`p-2 rounded-lg text-xs outline-none focus:border-amber-500 border ${isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-slate-50 text-slate-900 border-slate-200'}`} />
+                                        </div>
+                                        <input placeholder="Peso Balança (kg)" value={dimensao.pFisico} onChange={handlePercentInput((v) => setDimensao({...dimensao, pFisico: v}))} className={`w-full p-2 rounded-lg text-xs outline-none focus:border-amber-500 border ${isDarkMode ? 'bg-slate-950 text-white border-slate-700' : 'bg-slate-50 text-slate-900 border-slate-300'}`} />
+                                        <button onClick={handleCubagem} className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[10px] uppercase shadow-lg active:scale-95 transition-all">Aplicar Maior Peso</button>
+                                    </div>
+                                )}
+
+                                {erroVenda && (
+                                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-bold rounded-xl flex items-center gap-2 animate-fade-in">
+                                        <AlertTriangle size={14}/> {erroVenda}
+                                    </div>
+                                )}
+
+                                <button onClick={calcularVenda} className="w-full mt-2 py-4 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-xl font-black shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2 text-sm tracking-wide">
+                                    <Calculator size={20} /> CALCULAR PREÇO IDEAL
+                                </button>
+
+                                {/* RESULTADOS DETALHADOS */}
+                                {resultadoFinal ? (
+                                    <div className="mt-4 animate-fade-in space-y-4">
+                                        <div className={`border rounded-3xl p-5 relative overflow-hidden ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200 shadow-xl'}`}>
+                                            <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 rounded-bl-xl font-bold text-[8px] flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={10}/> Precificação Segura</div>
+                                            
+                                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Sua Sugestão</p>
+                                            <h2 className={`text-4xl font-black mb-2 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>R$ {resultadoFinal.precoSugerido.toFixed(2).replace('.', ',')}</h2>
+                                            
+                                            {platform === 'ML' && (
+                                                <p className={`text-[10px] font-bold mb-3 ${resultadoFinal.precoSugerido >= 79 ? (isDarkMode ? 'text-green-500' : 'text-green-600') : (isDarkMode ? 'text-slate-400' : 'text-slate-500')}`}>
+                                                    {resultadoFinal.precoSugerido >= 79 ? '✓ Frete Grátis Obrigatório' : (ofereceFreteGratis ? '✓ Frete Grátis e Rápido' : 'Frete Padrão (Comprador)')}
+                                                </p>
+                                            )}
+
+                                            <div className={`grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] border-b pb-3 mb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                                                <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Custo + Emb:</span><span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>R$ {resultadoFinal.custoBase.toFixed(2).replace('.', ',')}</span></div>
+                                                
+                                                {platform === 'ML' && (
+                                                    <div className={`flex justify-between items-center ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                                        <span className="flex flex-col">Frete <span className={`text-[8px] truncate max-w-[80px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} title={resultadoFinal.faixa}>({resultadoFinal.faixa})</span></span>
+                                                        <span className="text-red-500 font-bold">- R$ {resultadoFinal.frete.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Comissão ({resultadoFinal.margemMkt.toFixed(0)}%):</span><span className="text-red-500 font-bold">- R$ {resultadoFinal.comissao.toFixed(2).replace('.', ',')}</span></div>
+                                                <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Impostos:</span><span className="text-red-500 font-bold">- R$ {resultadoFinal.imposto.toFixed(2).replace('.', ',')}</span></div>
+                                                
+                                                {resultadoFinal.taxaFixa > 0 && (
+                                                    <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                                        <span>{platform === 'SHOPEE' ? 'Taxa Fixa:' : 'Tarifa Fixa:'}</span>
+                                                        <span className="text-red-500 font-bold">- R$ {resultadoFinal.taxaFixa.toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className={`space-y-1 p-3 rounded-xl border ${isDarkMode ? 'bg-slate-900/50 border-transparent' : 'bg-slate-50 border-slate-200'}`}>
+                                                <p className={`text-[8px] font-bold uppercase mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Composição do Preço</p>
+                                                <div className={`flex justify-between text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Custo Produto + Emb</span><span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>R$ {resultadoFinal.custoBase.toFixed(2).replace('.', ',')}</span></div>
+                                                <div className={`flex justify-between text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Comissão do App</span><span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>R$ {resultadoFinal.comissao.toFixed(2).replace('.', ',')}</span></div>
+                                                <div className={`flex justify-between text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Taxa Fixa / Frete</span><span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>R$ {(resultadoFinal.taxaFixa + resultadoFinal.frete).toFixed(2).replace('.', ',')}</span></div>
+                                                <div className={`flex justify-between text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}><span>Imposto</span><span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>R$ {resultadoFinal.imposto.toFixed(2).replace('.', ',')}</span></div>
+                                                <div className={`flex justify-between text-[10px] font-black text-amber-500 pt-1 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}><span>Total de Deduções</span><span>{(resultadoFinal.margemMkt + parsePercent(impostoVenda) + parsePercent(lucroDesejado)).toFixed(1).replace('.', ',')}%</span></div>
+                                            </div>
+
+                                            <div className={`mt-4 p-4 rounded-2xl border flex items-center justify-between shadow-lg ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
+                                                <div><p className={`font-bold uppercase text-[9px] mb-0.5 ${isDarkMode ? 'text-emerald-500' : 'text-emerald-700'}`}>Seu Lucro Líquido</p><p className={`text-2xl font-black ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>R$ {resultadoFinal.lucroLiq.toFixed(2).replace('.', ',')}</p></div>
+                                                <div className="text-right"><p className={`font-bold text-[8px] uppercase ${isDarkMode ? 'text-slate-500' : 'text-slate-600'}`}>Margem</p><span className={`px-2 py-0.5 rounded text-xs font-black ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800'}`}>{resultadoFinal.lucroPct.toFixed(1).replace('.', ',')}%</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className={`mt-auto flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl text-center ${isDarkMode ? 'border-slate-800' : 'border-slate-300'}`}>
+                                        <TrendingUp className={`mx-auto mb-3 ${isDarkMode ? 'text-slate-700' : 'text-slate-400'}`} size={32}/>
+                                        <p className={`text-xs uppercase font-bold tracking-wider leading-relaxed ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Preencha as margens e clique<br/>para descobrir o preço</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function InputGroup({ label, value, onChange, name, isYellow, hint, isDark, placeholder }) {
+            const darkClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 font-black focus:bg-amber-300 placeholder-yellow-700' : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 placeholder-slate-700';
+            const lightClass = isYellow ? 'bg-amber-400 border-amber-500 text-slate-950 font-black focus:bg-amber-300 placeholder-yellow-700' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white placeholder-slate-400';
+            return (
+                <div className="col-span-1">
+                    <label className={`mb-1 flex justify-between text-[10px] font-bold uppercase ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                        {label} {hint && <span className="text-emerald-500 font-normal">({hint})</span>}
+                    </label>
+                    <input type="text" name={name} value={value} onChange={onChange} placeholder={placeholder} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition-all ${isDark ? darkClass : lightClass}`} />
+                </div>
+            );
+        }
+
+        function SummaryRow({ label, valUSD, valBRL, isDark }) {
+            return (
+                <div className={`flex justify-between items-center text-xs py-2 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{label}</span>
+                    <div className="text-right">
+                        <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{valBRL}</span>
+                        {valUSD && <span className="text-[9px] text-slate-500 ml-2">({valUSD})</span>}
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // RENDERIZAÇÃO DO ROOT (CONTROLE DE ESTADO AUTENTICAÇÃO)
+        // ==========================================
+        function RootWrapper() {
+            const [session, setSession] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    setSession(session);
+                    setLoading(false);
+                });
+
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                    setSession(session);
+                });
+
+                return () => subscription.unsubscribe();
+            }, []);
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                );
+            }
+
+            return session ? <App /> : <LoginScreen />;
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<RootWrapper />);
     </script>
 </body>
 </html>
